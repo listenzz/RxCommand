@@ -1,4 +1,13 @@
-# Built application files
+*.iml
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.idea/**# Built application files
 *.apk
 *.ap_
 

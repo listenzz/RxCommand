@@ -3,6 +3,7 @@ package me.listenzz.library;
 import android.view.View;
 
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
 
 /**
  * Created by listen on 2017/3/16.
@@ -13,10 +14,19 @@ public class RxCommandBinder {
     public static <T> Disposable bind(View view, RxCommand<T> command) {
         return bind(view, command, null);
     }
-
-    public static <T> Disposable bind(View view, RxCommand<T> command, Object obj) {
+    public static <T> Disposable bind(final View view, final RxCommand<T> command, final Object obj) {
         view.setClickable(true);
-        view.setOnClickListener(v -> command.execute(obj));
-        return command.enabled().subscribe(view::setEnabled);
+        view.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                command.execute(obj);
+            }
+        });
+        return command.enabled().subscribe(new Consumer<Boolean>() {
+            @Override
+            public void accept(Boolean enabled) throws Exception {
+                view.setEnabled(enabled);
+            }
+        });
     }
 }

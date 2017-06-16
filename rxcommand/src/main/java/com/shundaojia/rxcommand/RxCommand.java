@@ -3,6 +3,7 @@ package com.shundaojia.rxcommand;
 import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.VisibleForTesting;
 
 import io.reactivex.Notification;
 import io.reactivex.Observable;
@@ -49,8 +50,7 @@ public class RxCommand<T> {
      */
     private final Observable<Boolean> mExecuting;
 
-
-    private final Observable<Boolean> mImmediateEnabled;
+    private final ConnectableObservable<Boolean> mImmediateEnabled;
 
     /**
      * see {@link #enabled()}
@@ -160,12 +160,13 @@ public class RxCommand<T> {
                             public Boolean apply(Boolean allowedConcurrent, Boolean executing) throws Exception {
                                 return allowedConcurrent || !executing;
                             }
-                        });
+                        })
+                .distinctUntilChanged()
+                .replay(1)
+                .autoConnect();
 
         if (enabledObservable == null) {
             enabledObservable = Observable.just(true);
-        } else {
-            enabledObservable = enabledObservable.startWith(true);
         }
 
         mImmediateEnabled = Observable
@@ -175,8 +176,9 @@ public class RxCommand<T> {
                         return enabled && allowed;
                     }
                 })
-                .replay(1)
-                .autoConnect();
+                .distinctUntilChanged()
+                .replay(1);
+        mImmediateEnabled.connect();
 
         mEnabled = Observable
                 .concat(mImmediateEnabled.take(1),

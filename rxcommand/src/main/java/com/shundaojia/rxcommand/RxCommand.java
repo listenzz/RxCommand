@@ -4,20 +4,15 @@ import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
-import java.util.LinkedList;
-import java.util.List;
-
 import io.reactivex.Notification;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
-import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 import io.reactivex.observables.ConnectableObservable;
-import io.reactivex.subjects.BehaviorSubject;
+import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
 
 /**
@@ -34,25 +29,46 @@ public class RxCommand<T> {
         return new RxCommand<>(enabled, function);
     }
 
-    private final List<ConnectableObservable<T>> mActiveExecutionObservables;
-    private final Subject<List<ConnectableObservable<T>>> mActiveExecutionSubject;
-    private final Observable<Boolean> mImmediateEnabled;
     private final Function<Object, Observable<T>> mFunc;
 
+    private final Subject<Observable<T>> mAddedExecutionObservableSubject;
+    private final Subject<Boolean> mAllowsConcurrentExecutionSubject;
+
+    /**
+     * see {@link #executionObservables()}
+     */
     private final Observable<Observable<T>> mExecutionObservables;
-    private final Observable<Boolean> mExecuting;
-    private final Observable<Boolean> mEnabled;
+
+    /**
+     * see {@link #errors()}
+     */
     private final Observable<Throwable> mErrors;
 
+    /**
+     * see {@link #executing()}
+     */
+    private final Observable<Boolean> mExecuting;
+
+
+    private final Observable<Boolean> mImmediateEnabled;
+
+    /**
+     * see {@link #enabled()}
+     */
+    private final Observable<Boolean> mEnabled;
+
+    /**
+     * see {@link #allowsConcurrentExecution()}
+     */
     private volatile boolean mAllowsConcurrentExecution;
 
     /**
      * create a command that is conditionally enabled.
      *
-     * @param enabledObservable An observable of BOOLs which indicate whether the command should
+     * @param enabledObservable An observable of Booleans which indicate whether the command should
      *              be enabled. {@link #enabled()} will be based on the latest value sent
      *                 from this observable. Before any values are sent, {@link #enabled()} will
-     *               default to YES. This argument may be null.
+     *               default to true. This argument may be null.
      * @param func  - A function which will map each input value (passed to {@link #execute(Object)})
      *                 to a observable of work. The returned observable will be multicasted
      *                 to a replay subject, sent on {@link #executionObservables()}, then
@@ -60,90 +76,107 @@ public class RxCommand<T> {
      *                 returned observable may be null.
      */
     public RxCommand(@Nullable Observable<Boolean> enabledObservable, @NonNull Function<Object, Observable<T>> func) {
-        mActiveExecutionObservables = new LinkedList<>();
-        mActiveExecutionSubject = BehaviorSubject.create();
+        mAddedExecutionObservableSubject = PublishSubject.create();
+        mAllowsConcurrentExecutionSubject = PublishSubject.create();
+
         mFunc = func;
 
-        Observable<ConnectableObservable<T>> newActiveExecutionObservables = mActiveExecutionSubject
-                        .flatMap(new Function<List<ConnectableObservable<T>>, ObservableSource<ConnectableObservable<T>>>() {
-                            @Override
-                            public ObservableSource<ConnectableObservable<T>> apply(List<ConnectableObservable<T>> observables) throws Exception {
-                                if (observables.isEmpty()) {
-                                    return Observable.empty();
-                                } else {
-                                    return Observable.fromIterable(observables);
-                                }
-                            }
-                        });
-
-        mExecutionObservables = newActiveExecutionObservables
-                .map(new Function<ConnectableObservable<T>, Observable<T>>() {
+        mExecutionObservables = mAddedExecutionObservableSubject
+                .map(new Function<Observable<T>, Observable<T>>() {
                     @Override
-                    public Observable<T> apply(ConnectableObservable<T> tObservable) throws Exception {
+                    public Observable<T> apply(Observable<T> tObservable) throws Exception {
                         return tObservable.onErrorResumeNext(Observable.<T>empty());
                     }
                 })
                 .observeOn(AndroidSchedulers.mainThread());
 
-        mErrors = newActiveExecutionObservables
-                        .flatMap(new Function<Observable<T>, ObservableSource<Throwable>>() {
-                            @Override
-                            public ObservableSource<Throwable> apply(Observable<T> tObservable) throws Exception {
-                                return tObservable.materialize()
-                                        .filter(new Predicate<Notification<T>>() {
-                                            @Override
-                                            public boolean test(Notification<T> tNotification) throws Exception {
-                                                return tNotification.isOnError();
-                                            }
-                                        })
-                                        .map(new Function<Notification<T>, Throwable>() {
-                                            @Override
-                                            public Throwable apply(Notification<T> tNotification) throws Exception {
-                                                return tNotification.getError();
-                                            }
-                                        });
-                            }
-                        }).observeOn(AndroidSchedulers.mainThread());
-
-
-
-        Observable<Boolean> immediateExecuting = mActiveExecutionSubject
-                .startWith(mActiveExecutionObservables)
-                .map(new Function<List<ConnectableObservable<T>>, Boolean>() {
+        mErrors = mAddedExecutionObservableSubject
+                .flatMap(new Function<Observable<T>, ObservableSource<Throwable>>() {
                     @Override
-                    public Boolean apply(List<ConnectableObservable<T>> observables) throws Exception {
-                        return observables.size() > 0;
+                    public ObservableSource<Throwable> apply(Observable<T> tObservable) throws Exception {
+                        return tObservable.materialize()
+                                .filter(new Predicate<Notification<T>>() {
+                                    @Override
+                                    public boolean test(Notification<T> tNotification) throws Exception {
+                                        return tNotification.isOnError();
+                                    }
+                                })
+                                .map(new Function<Notification<T>, Throwable>() {
+                                    @Override
+                                    public Throwable apply(Notification<T> tNotification) throws Exception {
+                                        return tNotification.getError();
+                                    }
+                                });
                     }
-                });
+                })
+                .observeOn(AndroidSchedulers.mainThread())
+                // if someone subscribes to `errors` _after_ an execution
+                // has started, it should still receive any error from that execution.
+                .publish()
+                .autoConnect();
+
+        Observable<Boolean> immediateExecuting = mAddedExecutionObservableSubject
+                .flatMap(new Function<Observable<T>, ObservableSource<Integer>>() {
+                    @Override
+                    public ObservableSource<Integer> apply(Observable<T> tObservable) throws Exception {
+                        return tObservable
+                                .ignoreElements()
+                                .toMaybe()
+                                .toObservable()
+                                .onErrorResumeNext(Observable.<T>empty())
+                                .concatWith(Observable.just(-1))
+                                .startWith(1)
+                                .cast(Integer.class);
+                    }
+                })
+                .scan(0, new BiFunction<Integer, Integer, Integer>() {
+                    @Override
+                    public Integer apply(Integer running, Integer next) throws Exception {
+                        return running + next;
+                    }
+                })
+                .map(new Function<Integer, Boolean>() {
+                    @Override
+                    public Boolean apply(Integer count) throws Exception {
+                        return count > 0;
+                    }
+                })
+                .startWith(false);
 
         mExecuting = immediateExecuting
                 .observeOn(AndroidSchedulers.mainThread())
-                .distinctUntilChanged();
+                // This is useful before the first value arrives on the main thread.
+                .startWith(false)
+                .distinctUntilChanged()
+                .replay(1)
+                .autoConnect();
 
-        Observable<Boolean> moreExecutionsAllowed = immediateExecuting
-                .map(new Function<Boolean, Boolean>() {
-                    @Override
-                    public Boolean apply(Boolean executing) throws Exception {
-                        if (mAllowsConcurrentExecution) {
-                            return true;
-                        } else {
-                            return !executing;
-                        }
-                    }
-                });
+        Observable<Boolean> moreExecutionsAllowed = Observable
+                .combineLatest(
+                        mAllowsConcurrentExecutionSubject.startWith(false),
+                        immediateExecuting,
+                        new BiFunction<Boolean, Boolean, Boolean>() {
+                            @Override
+                            public Boolean apply(Boolean allowedConcurrent, Boolean executing) throws Exception {
+                                return allowedConcurrent || !executing;
+                            }
+                        });
 
         if (enabledObservable == null) {
             enabledObservable = Observable.just(true);
         } else {
-            enabledObservable = enabledObservable.startWith(true).replay(1).autoConnect();
+            enabledObservable = enabledObservable.startWith(true);
         }
 
-        mImmediateEnabled = Observable.combineLatest(enabledObservable, moreExecutionsAllowed, new BiFunction<Boolean, Boolean, Boolean>() {
-            @Override
-            public Boolean apply(Boolean enabled, Boolean allowed) throws Exception {
-                return enabled && allowed;
-            }
-        });
+        mImmediateEnabled = Observable
+                .combineLatest(enabledObservable, moreExecutionsAllowed, new BiFunction<Boolean, Boolean, Boolean>() {
+                    @Override
+                    public Boolean apply(Boolean enabled, Boolean allowed) throws Exception {
+                        return enabled && allowed;
+                    }
+                })
+                .replay(1)
+                .autoConnect();
 
         mEnabled = Observable
                 .concat(mImmediateEnabled.take(1),
@@ -167,6 +200,7 @@ public class RxCommand<T> {
      */
     public final void setAllowsConcurrentExecution(boolean allows) {
         mAllowsConcurrentExecution = allows;
+        mAllowsConcurrentExecutionSubject.onNext(allows);
     }
 
     /**
@@ -270,31 +304,14 @@ public class RxCommand<T> {
             if (observable == null) {
                 throw new RuntimeException(String.format("null Observable returned from observable func for value %s", input));
             }
+
+            // This means that `executing` and `enabled` will send updated values before
+            // the observable actually starts performing work.
             final ConnectableObservable<T> connection = observable
                     .subscribeOn(AndroidSchedulers.mainThread())
-                    .publish();
-            addActiveExecutionObservable(connection);
-            connection.subscribe(new Observer<T>() {
-                @Override
-                public void onSubscribe(Disposable d) {
+                    .replay();
 
-                }
-
-                @Override
-                public void onNext(T value) {
-
-                }
-
-                @Override
-                public void onError(Throwable e) {
-                    removeActiveExecutionObservable(connection);
-                }
-
-                @Override
-                public void onComplete() {
-                    removeActiveExecutionObservable(connection);
-                }
-            });
+            mAddedExecutionObservableSubject.onNext(connection);
             connection.connect();
             return connection;
         } catch (Exception e) {
@@ -302,16 +319,5 @@ public class RxCommand<T> {
             return Observable.error(e);
         }
     }
-
-    private void addActiveExecutionObservable(ConnectableObservable<T> observable) {
-        mActiveExecutionObservables.add(observable);
-        mActiveExecutionSubject.onNext(mActiveExecutionObservables);
-    }
-
-    private void removeActiveExecutionObservable(ConnectableObservable<T> observable) {
-        mActiveExecutionObservables.remove(observable);
-        mActiveExecutionSubject.onNext(mActiveExecutionObservables);
-    }
-
 }
 

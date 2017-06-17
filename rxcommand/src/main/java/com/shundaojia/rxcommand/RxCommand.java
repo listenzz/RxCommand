@@ -3,7 +3,6 @@ package com.shundaojia.rxcommand;
 import android.support.annotation.MainThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 
 import io.reactivex.Notification;
 import io.reactivex.Observable;
@@ -178,6 +177,7 @@ public class RxCommand<T> {
                 })
                 .distinctUntilChanged()
                 .replay(1);
+        // since `mImmediateEnabled` is not export, we must trigger this stream manually
         mImmediateEnabled.connect();
 
         mEnabled = Observable
@@ -233,7 +233,6 @@ public class RxCommand<T> {
     public Observable<Boolean> executing() {
         return mExecuting;
     }
-
 
     /**
      * An observable of whether this command is able to execute.

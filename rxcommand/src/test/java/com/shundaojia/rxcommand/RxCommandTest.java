@@ -194,10 +194,14 @@ public class RxCommandTest {
             }
         });
 
-        TestObserver<String> testObserver1 = new TestObserver<>();
-        command.switchToLatest().subscribe(testObserver1);
+        TestObserver<String> testObserver = new TestObserver<>();
+        command.switchToLatest().subscribe(testObserver);
+
         command.execute(null);
-        testObserver1.assertNoValues();
+
+        testObserver.assertNoValues();
+        testObserver.assertNoErrors();
+        testObserver.assertNotComplete();
     }
 
     @Test
@@ -206,16 +210,26 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.error(throwable);
+                return Observable.<String>error(throwable)
+                        .subscribeOn(Schedulers.newThread())
+                        .delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
-        TestObserver<Boolean> testObserver = new TestObserver<>();
-        command.executing().subscribe(testObserver);
+        command.executing().test().assertValue(false);
 
         command.execute(null);
 
-        testObserver.assertValues(false, true, false);
+        command.executing().test().assertValue(true);
+
+        // wait
+        try {
+            Thread.sleep(15);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        command.executing().test().assertValue(false);
 
     }
 
@@ -224,16 +238,26 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.just(VALUE);
+                return Observable.just(VALUE)
+                        .subscribeOn(Schedulers.newThread())
+                        .delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
-        TestObserver<Boolean> testObserver = new TestObserver<>();
-        command.executing().subscribe(testObserver);
+        command.executing().test().assertValue(false);
 
         command.execute(null);
 
-        testObserver.assertValues(false, true, false);
+        command.executing().test().assertValue(true);
+
+        // wait
+        try {
+            Thread.sleep(15);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        command.executing().test().assertValue(false);
     }
 
     @Test
@@ -244,15 +268,19 @@ public class RxCommandTest {
             public Observable<String> apply(Object o) throws Exception {
                 return Observable.just(VALUE)
                         .subscribeOn(Schedulers.newThread())
-                        .delay(100, TimeUnit.MILLISECONDS);
+                        .delay(10, TimeUnit.MILLISECONDS);
             }
         });
+
+        command.enabled()
+                .test()
+                .assertValue(true);
 
         command.execute(null);
 
         // wait
         try {
-            Thread.sleep(50);
+            Thread.sleep(5);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -264,6 +292,10 @@ public class RxCommandTest {
         command.execute(null)
                 .test()
                 .assertError(IllegalStateException.class);
+
+        command.errors()
+                .test()
+                .assertNoValues();
     }
 
     @Test
@@ -274,7 +306,7 @@ public class RxCommandTest {
             public Observable<String> apply(Object o) throws Exception {
                 return Observable.just((String) o)
                         .subscribeOn(Schedulers.newThread())
-                        .delay(100, TimeUnit.MILLISECONDS);
+                        .delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
@@ -284,7 +316,7 @@ public class RxCommandTest {
 
         // wait
         try {
-            Thread.sleep(50);
+            Thread.sleep(5);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -303,7 +335,7 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(100, TimeUnit.MILLISECONDS);
+                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
@@ -316,7 +348,7 @@ public class RxCommandTest {
 
         // wait
         try {
-            Thread.sleep(400);
+            Thread.sleep(30);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -331,7 +363,7 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(100, TimeUnit.MILLISECONDS);
+                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
@@ -359,7 +391,7 @@ public class RxCommandTest {
 
         // wait
         try {
-            Thread.sleep(400);
+            Thread.sleep(30);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -377,7 +409,7 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(100, TimeUnit.MILLISECONDS);
+                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
@@ -390,7 +422,7 @@ public class RxCommandTest {
 
         // wait
         try {
-            Thread.sleep(400);
+            Thread.sleep(30);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -405,7 +437,7 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(100, TimeUnit.MILLISECONDS);
+                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
@@ -421,7 +453,7 @@ public class RxCommandTest {
 
         // wait
         try {
-            Thread.sleep(400);
+            Thread.sleep(30);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -430,5 +462,4 @@ public class RxCommandTest {
         testObserver.assertValue("3");
 
     }
-
 }

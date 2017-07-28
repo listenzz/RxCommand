@@ -9,18 +9,8 @@ A lightweight, RxJava-based library that helps ViewModel provide commands to bin
 * Make your business logic code centralized for easy reading and maintenance
 
 ## How to use 
-### Demo 1
 
-<img src = "./screenshot/todo.png" width ="320px" />
-
-[todo-android](https://github.com/listenzz/todo-android/tree/todo-mvvm-rxcommand)
-
-```
-$ git clone git@github.com:listenzz/todo-android.git
-$ git checkout todo-mvvm-rxcommand
-```
-
-### Demo 2
+### Demo
 
 ![login](./screenshot/login.png) 
 
@@ -129,7 +119,7 @@ buildscript {
 ```gradle
 dependencies {
     compile 'com.android.support:appcompat-v7:25.2.0'
-    compile 'io.reactivex.rxjava2:rxjava:2.0.1'
+    compile 'io.reactivex.rxjava2:rxjava:2.1.0'
     compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
     compile 'com.shundaojia:rxcommand:1.1.1'
 }

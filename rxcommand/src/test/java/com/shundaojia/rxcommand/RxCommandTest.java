@@ -3,6 +3,7 @@ package com.shundaojia.rxcommand;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
@@ -165,7 +166,7 @@ public class RxCommandTest {
     @Test
     public void anErrorOccurredDuringExecution_emitThrowableAsValue() {
 
-        final Throwable throwable = new Exception("something wrong");
+        final Throwable throwable = new IOException("something wrong");
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
@@ -182,6 +183,8 @@ public class RxCommandTest {
 
         testObserver1.assertValue(throwable);
         testObserver2.assertValue(throwable);
+
+
     }
 
     @Test
@@ -206,7 +209,7 @@ public class RxCommandTest {
 
     @Test
     public void executionWithError_showAndHideLoading() {
-        final Throwable throwable = new Exception("something wrong");
+        final Throwable throwable = new IOException("something wrong");
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
@@ -222,14 +225,20 @@ public class RxCommandTest {
 
         command.executing().test().assertValue(true);
 
-        // wait
-        try {
-            Thread.sleep(15);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
 
-        command.executing().test().assertValue(false);
+        command.executing().test()
+                .awaitDone(15, TimeUnit.MILLISECONDS)
+                .assertValues(true, false);
+
+//
+//        // wait
+//        try {
+//            Thread.sleep(15);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+
+    //    command.executing().test().assertValue(false);
 
     }
 

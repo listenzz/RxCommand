@@ -1,5 +1,7 @@
 package com.shundaojia.sample;
 
+import android.arch.lifecycle.LifecycleRegistry;
+import android.arch.lifecycle.LifecycleRegistryOwner;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
@@ -7,31 +9,29 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import com.jakewharton.rxbinding2.widget.RxTextView;
+import com.shundaojia.live.Live;
+import com.shundaojia.rxcommand.RxCommandBinder;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
-
-import com.shundaojia.rxcommand.RxCommandBinder;
 
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity implements LifecycleRegistryOwner{
+
+    private final LifecycleRegistry registry = new LifecycleRegistry(this);
 
     @BindView(R.id.phone_number)
     EditText phoneNumberEditText;
-    @BindView(R.id.verification_code_button)
-    Button verificationCodeButton;
-    @BindView(R.id.verification_code)
-    EditText verificationCodeEditText;
+    @BindView(R.id.captcha_button)
+    Button captchaButton;
+    @BindView(R.id.captcha)
+    EditText captchaEditText;
     @BindView(R.id.login_button)
     Button loginButton;
 
     LoginViewModel viewModel;
-
-    CompositeDisposable compositeDisposable = new CompositeDisposable();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,89 +40,91 @@ public class LoginActivity extends AppCompatActivity {
         ButterKnife.bind(this);
         viewModel = new LoginViewModel();
 
-        //bind view model
-        RxTextView.textChanges(phoneNumberEditText).subscribe(viewModel.phoneNumber());
-        RxTextView.textChanges(verificationCodeEditText).subscribe(viewModel.verificationCode());
+        // bind view model
+        RxTextView
+                .textChanges(phoneNumberEditText)
+                .compose(Live.bindLifecycle(this))
+                .subscribe(viewModel::setPhoneNumber);
 
-        Disposable disposable = RxCommandBinder.bind(verificationCodeButton, viewModel.verificationCodeCommand());
-        compositeDisposable.add(disposable);
-        disposable = RxCommandBinder.bind(loginButton, viewModel.loginCommand());
-        compositeDisposable.add(disposable);
+        RxTextView
+                .textChanges(captchaEditText)
+                .compose(Live.bindLifecycle(this))
+                .subscribe(viewModel::setVerificationCode);
 
-        //respond to command
+        RxCommandBinder
+                .bind(captchaButton, viewModel.verificationCodeCommand(), Live.bindLifecycle(this));
+        RxCommandBinder
+                .bind(loginButton, viewModel.loginCommand(), Live.bindLifecycle(this));
 
-        //fetch verification code
-        disposable = viewModel.verificationCodeCommand()
+        // captcha
+        viewModel.verificationCodeCommand()
                 .executing()
+                .compose(Live.bindLifecycle(this))
                 .subscribe(executing -> {
                     if (executing) {
-                        verificationCodeButton.setText("fetch...");
+                        captchaButton.setText("Fetch...");
                     } else {
-                        verificationCodeButton.setText("fetch code");
+                        captchaButton.setText("Fetch Captcha");
                     }
                 });
-        compositeDisposable.add(disposable);
 
-        disposable = viewModel.verificationCodeCommand()
+        viewModel.verificationCodeCommand()
                 .switchToLatest()
                 .observeOn(AndroidSchedulers.mainThread())
+                .compose(Live.bindLifecycle(this))
                 .subscribe(result -> Toast.makeText(LoginActivity.this, result, Toast.LENGTH_LONG).show());
-        compositeDisposable.add(disposable);
 
-
-        //countdown
-        disposable = viewModel.countdownCommand()
+        // countdown
+        viewModel.countdownCommand()
                 .executing()
+                .compose(Live.bindLifecycle(this))
                 .subscribe(executing -> {
                     if (!executing) {
-                        verificationCodeButton.setText("fetch code");
+                        captchaButton.setText("Fetch Captcha");
                     }
                 });
-        compositeDisposable.add(disposable);
 
-        disposable = viewModel.countdownCommand()
+        viewModel.countdownCommand()
                 .switchToLatest()
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(s -> verificationCodeButton.setText(s));
-        compositeDisposable.add(disposable);
+                .compose(Live.bindLifecycle(this))
+                .subscribe(s -> captchaButton.setText(s));
 
-        //login
-        disposable = viewModel.loginCommand()
+        // login
+        viewModel.loginCommand()
                 .executing()
+                .compose(Live.bindLifecycle(this))
                 .subscribe(executing -> {
                     if (executing) {
-                        loginButton.setText("login...");
+                        loginButton.setText("Login...");
                     } else {
-                        loginButton.setText("login");
+                        loginButton.setText("Login");
                     }
                 });
-        compositeDisposable.add(disposable);
 
-        disposable = Observable.merge(
-                viewModel.verificationCodeCommand().errors(),
-                viewModel.loginCommand().errors())
+        Observable.merge(
+                    viewModel.verificationCodeCommand().errors(),
+                    viewModel.loginCommand().errors())
+                .compose(Live.bindLifecycle(this))
                 .subscribe(throwable ->
                         Toast.makeText(LoginActivity.this, throwable.getLocalizedMessage(), Toast.LENGTH_LONG).show()
                 );
-        compositeDisposable.add(disposable);
 
-        disposable = viewModel.loginCommand()
+        viewModel.loginCommand()
                 .switchToLatest()
                 .observeOn(AndroidSchedulers.mainThread())
+                .compose(Live.bindLifecycle(this))
                 .subscribe(success -> {
                     if (success) {
-                        Toast.makeText(LoginActivity.this, "login success!! Now goto the MainActivity.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(LoginActivity.this, "Login success!! Now goto the MainActivity.", Toast.LENGTH_LONG).show();
                     } else {
-                        Toast.makeText(LoginActivity.this, "login fail!!", Toast.LENGTH_LONG).show();
+                        Toast.makeText(LoginActivity.this, "Login fail!!", Toast.LENGTH_LONG).show();
                     }
                 });
-        compositeDisposable.add(disposable);
-
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        compositeDisposable.clear();
+    public LifecycleRegistry getLifecycle() {
+        return registry;
     }
 }

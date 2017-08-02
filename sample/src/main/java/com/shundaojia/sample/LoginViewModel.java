@@ -1,11 +1,12 @@
 package com.shundaojia.sample;
 
+import com.shundaojia.rxcommand.RxCommand;
+
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
-import com.shundaojia.rxcommand.RxCommand;
 import timber.log.Timber;
 
 /**
@@ -16,38 +17,38 @@ public class LoginViewModel {
 
     private RxCommand<String> _countdownCommand;
     private RxCommand<Boolean> _loginCommand;
-    private RxCommand<String> _verificationCodeCommand;
+    private RxCommand<String> _captchaCommand;
 
     private Subject<CharSequence> _phoneNumber;
-    private Subject<CharSequence> _verificationCode;
+    private Subject<CharSequence> _captcha;
 
-    private Observable<Boolean> _verificationCodeValid;
+    private Observable<Boolean> _captchaValid;
     private Observable<Boolean> _phoneNumberValid;
 
     public LoginViewModel() {
         _phoneNumber = BehaviorSubject.create();
-        _verificationCode = BehaviorSubject.create();
+        _captcha = BehaviorSubject.create();
 
-        _verificationCodeValid = _verificationCode.map(s -> s.toString().trim().length() == 6);
+        _captchaValid = _captcha.map(s -> s.toString().trim().length() == 6);
         _phoneNumberValid = _phoneNumber.map(s -> s.toString().trim().length() == 11);
     }
 
-    public Subject<CharSequence> phoneNumber() {
-        return _phoneNumber;
+    public void setPhoneNumber(CharSequence phoneNumber) {
+        _phoneNumber.onNext(phoneNumber);
     }
 
-    public Subject<CharSequence> verificationCode() {
-        return _verificationCode;
+    public void setVerificationCode(CharSequence code) {
+        _captcha.onNext(code);
     }
 
     public RxCommand<String> verificationCodeCommand() {
-        if (_verificationCodeCommand == null) {
+        if (_captchaCommand == null) {
             Observable<Boolean> enabled = Observable.combineLatest(
                     _phoneNumberValid,
                     countdownCommand().executing(),
                     (valid, executing) -> valid && !executing);
 
-            _verificationCodeCommand = RxCommand.create(enabled, o -> {
+            _captchaCommand = RxCommand.create(enabled, o -> {
                 String phone = _phoneNumber.blockingFirst().toString();
                 Timber.i("fetch verification code with %s", phone);
                 Observable fetchCode =  fetchVerificationCode(phone);
@@ -55,7 +56,7 @@ public class LoginViewModel {
                 return Observable.concat(fetchCode, countdown);
             });
         }
-        return _verificationCodeCommand;
+        return _captchaCommand;
     }
 
     public RxCommand<String> countdownCommand() {
@@ -71,13 +72,13 @@ public class LoginViewModel {
     public RxCommand<Boolean> loginCommand() {
         if (_loginCommand == null) {
             Observable<Boolean> loginInputValid = Observable.combineLatest(
-                    _verificationCodeValid,
+                    _captchaValid,
                     _phoneNumberValid,
                     (codeValid, phoneValid) -> codeValid && phoneValid);
 
             _loginCommand = RxCommand.create(loginInputValid, o -> {
                 String phone = _phoneNumber.blockingFirst().toString();
-                String code = _verificationCode.blockingFirst().toString();
+                String code = _captcha.blockingFirst().toString();
                 return login(phone, code);
             });
         }

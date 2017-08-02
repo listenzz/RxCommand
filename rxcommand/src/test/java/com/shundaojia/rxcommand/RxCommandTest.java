@@ -9,9 +9,12 @@ import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.observers.TestObserver;
 import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subjects.BehaviorSubject;
 
 /**
  * Created by listen on 2017/6/16.
@@ -184,7 +187,6 @@ public class RxCommandTest {
         testObserver1.assertValue(throwable);
         testObserver2.assertValue(throwable);
 
-
     }
 
     @Test
@@ -229,16 +231,6 @@ public class RxCommandTest {
         command.executing().test()
                 .awaitDone(15, TimeUnit.MILLISECONDS)
                 .assertValues(true, false);
-
-//
-//        // wait
-//        try {
-//            Thread.sleep(15);
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
-
-    //    command.executing().test().assertValue(false);
 
     }
 
@@ -471,4 +463,34 @@ public class RxCommandTest {
         testObserver.assertValue("3");
 
     }
+
+    @Test
+    public void someTest() {
+
+        BehaviorSubject<String> subject = BehaviorSubject.create();
+
+        subject.subscribe(new Consumer<String>() {
+            @Override
+            public void accept(@NonNull String s) throws Exception {
+                System.out.println(s);
+            }
+        }, new Consumer<Throwable>() {
+            @Override
+            public void accept(@NonNull Throwable throwable) throws Exception {
+
+            }
+        });
+
+       // Observable.<String>error(new RuntimeException()).subscribe(subject);
+
+        Observable.just("xxxx").subscribe(subject);
+
+        Observable.just("yyyy").subscribe(subject);
+
+        Observable.<String>empty().subscribe(subject);
+
+        Observable.just("zzzz").subscribe(subject);
+
+    }
+
 }

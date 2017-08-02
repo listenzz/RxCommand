@@ -32,29 +32,30 @@
         android:background="#ffffff">
 
         <Button
-            android:id="@+id/verification_code_button"
+            android:id="@+id/captcha_button"
             style="?android:attr/borderlessButtonStyle"
-            android:layout_width="100dp"
+            android:layout_width="120dp"
             android:layout_height="34dp"
             android:layout_alignParentRight="true"
+            android:inputType="textCapWords"
             android:layout_centerVertical="true"
             android:layout_gravity="center_vertical|right"
             android:layout_marginRight="16dp"
             android:background="@drawable/selector_verification_code_button"
-            android:text="Fetch code"
+            android:text="Fetch Captcha"
             android:textColor="@color/selector_verification_code_text_color"
             android:textSize="13dp" />
 
 
         <EditText
-            android:id="@+id/verification_code"
+            android:id="@+id/captcha"
             android:layout_width="match_parent"
             android:layout_height="58dp"
-            android:layout_toLeftOf="@id/verification_code_button"
+            android:layout_toLeftOf="@id/captcha_button"
             android:background="#ffffff"
             android:drawableLeft="@drawable/icon_lock"
             android:drawablePadding="10dp"
-            android:hint="Enter your verification code"
+            android:hint="Enter your captcha"
             android:inputType="number"
             android:maxLength="6"
             android:paddingLeft="10dp"
@@ -72,6 +73,7 @@
         android:layout_width="match_parent"
         android:layout_height="44dp"
         android:layout_marginLeft="24dp"
+        android:inputType="textCapWords"
         android:layout_marginRight="24dp"
         android:layout_marginTop="35dp"
         android:background="@drawable/selector_common_button"

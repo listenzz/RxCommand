@@ -9,12 +9,9 @@ import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
-import io.reactivex.annotations.NonNull;
-import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.observers.TestObserver;
 import io.reactivex.schedulers.Schedulers;
-import io.reactivex.subjects.BehaviorSubject;
 
 /**
  * Created by listen on 2017/6/16.
@@ -111,8 +108,8 @@ public class RxCommandTest {
         });
 
         command.execute(null)
-            .test()
-            .assertError(IllegalStateException.class);
+                .test()
+                .assertError(IllegalStateException.class);
     }
 
     @Test
@@ -123,7 +120,7 @@ public class RxCommandTest {
                 if (o == null) {
                     return Observable.error(new Exception("something wrong"));
                 } else {
-                    return Observable.just((String)o);
+                    return Observable.just((String) o);
                 }
             }
         });
@@ -149,7 +146,7 @@ public class RxCommandTest {
                 if (o == null) {
                     return Observable.error(new Exception("something wrong"));
                 } else {
-                    return Observable.just((String)o);
+                    return Observable.just((String) o);
                 }
             }
         });
@@ -336,7 +333,7 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
+                return Observable.just((String) o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
@@ -364,7 +361,7 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
+                return Observable.just((String) o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
@@ -410,7 +407,7 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
+                return Observable.just((String) o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
@@ -438,7 +435,7 @@ public class RxCommandTest {
         RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
             @Override
             public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String)o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
+                return Observable.just((String) o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
             }
         });
 
@@ -461,35 +458,6 @@ public class RxCommandTest {
 
         testObserver.assertValueCount(1);
         testObserver.assertValue("3");
-
-    }
-
-    @Test
-    public void someTest() {
-
-        BehaviorSubject<String> subject = BehaviorSubject.create();
-
-        subject.subscribe(new Consumer<String>() {
-            @Override
-            public void accept(@NonNull String s) throws Exception {
-                System.out.println(s);
-            }
-        }, new Consumer<Throwable>() {
-            @Override
-            public void accept(@NonNull Throwable throwable) throws Exception {
-
-            }
-        });
-
-       // Observable.<String>error(new RuntimeException()).subscribe(subject);
-
-        Observable.just("xxxx").subscribe(subject);
-
-        Observable.just("yyyy").subscribe(subject);
-
-        Observable.<String>empty().subscribe(subject);
-
-        Observable.just("zzzz").subscribe(subject);
 
     }
 

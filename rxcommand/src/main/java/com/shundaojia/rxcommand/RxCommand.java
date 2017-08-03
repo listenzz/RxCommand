@@ -1,13 +1,13 @@
 package com.shundaojia.rxcommand;
 
 import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
 import io.reactivex.Notification;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.annotations.Nullable;
 import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
@@ -32,12 +32,18 @@ public class RxCommand<T> {
     private final Function<Object, Observable<T>> mFunc;
 
     private final Subject<Observable<T>> mAddedExecutionObservableSubject;
+
     private final Subject<Boolean> mAllowsConcurrentExecutionSubject;
 
     /**
      * see {@link #executionObservables()}
      */
     private final Observable<Observable<T>> mExecutionObservables;
+
+    /**
+     * see {@link #switchToLatest()}
+     */
+    private final Observable<T> mLatestObservable;
 
     /**
      * see {@link #errors()}
@@ -65,19 +71,19 @@ public class RxCommand<T> {
      * create a command that is conditionally enabled.
      *
      * @param enabledObservable An observable of Booleans which indicate whether the command should
-     *              be enabled. {@link #enabled()} will be based on the latest value sent
-     *                 from this observable. Before any values are sent, {@link #enabled()} will
-     *               default to true. This argument may be null.
-     * @param func  - A function which will map each input value (passed to {@link #execute(Object)})
-     *                 to a observable of work. The returned observable will be multicasted
-     *                 to a replay subject, sent on {@link #executionObservables()}, then
-     *                 subscribed to synchronously. Neither the function nor the
-     *                 returned observable may be null.
+     *                          be enabled. {@link #enabled()} will be based on the latest value sent
+     *                          from this observable. Before any values are sent, {@link #enabled()} will
+     *                          default to true. This argument may be null.
+     * @param func              - A function which will map each input value (passed to {@link #execute(Object)})
+     *                          to a observable of work. The returned observable will be multicasted
+     *                          to a replay subject, sent on {@link #executionObservables()}, then
+     *                          subscribed to synchronously. Neither the function nor the
+     *                          returned observable may be null.
      */
     public RxCommand(@Nullable Observable<Boolean> enabledObservable, @NonNull Function<Object, Observable<T>> func) {
+
         mAddedExecutionObservableSubject = PublishSubject.create();
         mAllowsConcurrentExecutionSubject = PublishSubject.create();
-
         mFunc = func;
 
         mExecutionObservables = mAddedExecutionObservableSubject
@@ -88,6 +94,11 @@ public class RxCommand<T> {
                     }
                 })
                 .observeOn(AndroidSchedulers.mainThread());
+
+        mLatestObservable = Observable
+                .switchOnNext(mExecutionObservables)
+                .publish()
+                .autoConnect();
 
         mErrors = mAddedExecutionObservableSubject
                 .flatMap(new Function<Observable<T>, ObservableSource<Throwable>>() {
@@ -190,6 +201,7 @@ public class RxCommand<T> {
 
     /**
      * Call {@link #RxCommand(Observable, Function)} with a null `enabledObservable`.
+     *
      * @param func
      */
     public RxCommand(Function<Object, Observable<T>> func) {
@@ -198,6 +210,7 @@ public class RxCommand<T> {
 
     /**
      * see {@link #allowsConcurrentExecution()}
+     *
      * @param allows
      */
     public final void setAllowsConcurrentExecution(boolean allows) {
@@ -208,11 +221,11 @@ public class RxCommand<T> {
     /**
      * An observable of the observables returned by successful invocations of {@link #execute(Object)}
      * (i.e., while the receiver is {@link #enabled()}).
-     *
+     * <p>
      * Errors will be automatically caught upon the inner observables, and sent upon
      * {@link #errors()} instead. If you _want_ to receive inner errors, use {@link #execute(Object)} or
      * {@link Observable#materialize()}
-     *
+     * <p>
      * Only executions that begin _after_ subscription will be sent upon this
      * observable. All inner observables will arrive upon the main thread.
      */
@@ -222,11 +235,11 @@ public class RxCommand<T> {
 
     /**
      * An observable of whether this command is currently executing.
-     *
+     * <p>
      * This will send true whenever {@link #execute(Object)} is invoked and the created observable has
      * not yet terminated. Once all executions have terminated, {@link #executing()} will
      * send false.
-     *
+     * <p>
      * This observable will send its current value upon subscription, and then all
      * future values on the main thread.
      */
@@ -237,13 +250,13 @@ public class RxCommand<T> {
     /**
      * An observable of whether this command is able to execute.
      * This will send false if:
-     *
-     *  - The command was created with an `enabledObservable`, and false is sent upon that
-     *   observable, or
-     *  - {@link #allowsConcurrentExecution()} is false and the command has started executing.
-     *
+     * <p>
+     * - The command was created with an `enabledObservable`, and false is sent upon that
+     * observable, or
+     * - {@link #allowsConcurrentExecution()} is false and the command has started executing.
+     * <p>
      * Once the above conditions are no longer met, the observable will send true.
-     *
+     * <p>
      * This observable will send its current value upon subscription, and then all
      * future values on the main thread.
      */
@@ -253,11 +266,11 @@ public class RxCommand<T> {
 
     /**
      * Forwards any errors that occur within observables returned by {@link #execute(Object)}.
-     *
+     * <p>
      * When an error occurs on a observable returned from {@link #execute(Object)}, this observable will
      * send the associated {@link Throwable} value as a `next` event (since an `error` event
      * would terminate the stream).
-     *
+     * <p>
      * After subscription, this observable will send all future errors on the main
      * thread.
      */
@@ -267,7 +280,7 @@ public class RxCommand<T> {
 
     /**
      * Whether the command allows multiple executions to proceed concurrently.
-     *
+     * <p>
      * The default value for this property is false.
      */
     public boolean allowsConcurrentExecution() {
@@ -276,19 +289,20 @@ public class RxCommand<T> {
 
     /**
      * switch to the latest observable of observables send by {@link #executionObservables()}
+     *
      * @return
      */
     public Observable<T> switchToLatest() {
-        return Observable.switchOnNext(mExecutionObservables);
+        return mLatestObservable;
     }
 
     /**
      * If the receiver is enabled, this method will:
-     *
-     *  1. Invoke the `func` given at the time of creation.
-     *  2. Multicast the returned observable.
-     *  3. Send the multicasted observable on {@link #executionObservables()}.
-     *  4. Subscribe (connect) to the original observable on the main thread.
+     * <p>
+     * 1. Invoke the `func` given at the time of creation.
+     * 2. Multicast the returned observable.
+     * 3. Send the multicasted observable on {@link #executionObservables()}.
+     * 4. Subscribe (connect) to the original observable on the main thread.
      *
      * @param input The input value to pass to the receiver's `func`. This may be null.
      * @return the multicasted observable, after subscription. If the receiver is not

@@ -2,10 +2,14 @@ package com.shundaojia.sample;
 
 import android.arch.lifecycle.LifecycleRegistry;
 import android.arch.lifecycle.LifecycleRegistryOwner;
+import android.arch.lifecycle.ViewModelProviders;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.jakewharton.rxbinding2.widget.RxTextView;
@@ -20,16 +24,24 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 
 public class LoginActivity extends AppCompatActivity implements LifecycleRegistryOwner{
 
+    private final static String TAG = "LoginActivity";
+
     private final LifecycleRegistry registry = new LifecycleRegistry(this);
 
     @BindView(R.id.phone_number)
     EditText phoneNumberEditText;
+
     @BindView(R.id.captcha_button)
     Button captchaButton;
+
     @BindView(R.id.captcha)
     EditText captchaEditText;
+
     @BindView(R.id.login_button)
     Button loginButton;
+
+    @BindView(R.id.tip)
+    TextView tipTextView;
 
     LoginViewModel viewModel;
 
@@ -38,7 +50,7 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         ButterKnife.bind(this);
-        viewModel = new LoginViewModel();
+        viewModel = ViewModelProviders.of(this, new ViewModelFactory()).get(LoginViewModel.class);
 
         // bind view model
         RxTextView
@@ -52,12 +64,12 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
                 .subscribe(viewModel::setVerificationCode);
 
         RxCommandBinder
-                .bind(captchaButton, viewModel.verificationCodeCommand(), Live.bindLifecycle(this));
+                .bind(captchaButton, viewModel.captchaCommand(), Live.bindLifecycle(this));
         RxCommandBinder
                 .bind(loginButton, viewModel.loginCommand(), Live.bindLifecycle(this));
 
         // captcha
-        viewModel.verificationCodeCommand()
+        viewModel.captchaCommand()
                 .executing()
                 .compose(Live.bindLifecycle(this))
                 .subscribe(executing -> {
@@ -68,7 +80,7 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
                     }
                 });
 
-        viewModel.verificationCodeCommand()
+        viewModel.captchaCommand()
                 .switchToLatest()
                 .observeOn(AndroidSchedulers.mainThread())
                 .compose(Live.bindLifecycle(this))
@@ -81,6 +93,9 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
                 .subscribe(executing -> {
                     if (!executing) {
                         captchaButton.setText("Fetch Captcha");
+                        tipTextView.setVisibility(View.GONE);
+                    } else {
+                        tipTextView.setVisibility(View.VISIBLE);
                     }
                 });
 
@@ -89,6 +104,12 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
                 .observeOn(AndroidSchedulers.mainThread())
                 .compose(Live.bindLifecycle(this))
                 .subscribe(s -> captchaButton.setText(s));
+
+        viewModel.countdownCommand()
+                .switchToLatest()
+                .observeOn(AndroidSchedulers.mainThread())
+                .compose(Live.bindLifecycle(this))
+                .subscribe(s -> Log.w(TAG, s));
 
         // login
         viewModel.loginCommand()
@@ -103,7 +124,7 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
                 });
 
         Observable.merge(
-                    viewModel.verificationCodeCommand().errors(),
+                    viewModel.captchaCommand().errors(),
                     viewModel.loginCommand().errors())
                 .compose(Live.bindLifecycle(this))
                 .subscribe(throwable ->

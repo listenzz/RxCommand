@@ -1,5 +1,7 @@
 package com.shundaojia.sample;
 
+import android.arch.lifecycle.ViewModel;
+
 import com.shundaojia.rxcommand.RxCommand;
 
 import java.util.concurrent.TimeUnit;
@@ -13,7 +15,7 @@ import timber.log.Timber;
  * Created by listen on 2017/3/16.
  */
 
-public class LoginViewModel {
+public class LoginViewModel extends ViewModel{
 
     private RxCommand<String> _countdownCommand;
     private RxCommand<Boolean> _loginCommand;
@@ -41,7 +43,7 @@ public class LoginViewModel {
         _captcha.onNext(code);
     }
 
-    public RxCommand<String> verificationCodeCommand() {
+    public RxCommand<String> captchaCommand() {
         if (_captchaCommand == null) {
             Observable<Boolean> enabled = Observable.combineLatest(
                     _phoneNumberValid,
@@ -51,7 +53,7 @@ public class LoginViewModel {
             _captchaCommand = RxCommand.create(enabled, o -> {
                 String phone = _phoneNumber.blockingFirst().toString();
                 Timber.i("fetch verification code with %s", phone);
-                Observable fetchCode =  fetchVerificationCode(phone);
+                Observable fetchCode =  fetchCaptcha(phone);
                 Observable countdown =  Observable.defer(() -> countdownCommand().execute(null).ignoreElements().toObservable()) ;
                 return Observable.concat(fetchCode, countdown);
             });
@@ -63,8 +65,8 @@ public class LoginViewModel {
         if (_countdownCommand == null) {
             _countdownCommand = RxCommand.create(o -> Observable
                     .interval(1, TimeUnit.SECONDS)
-                    .take(10)//from 0 to 9
-                    .map(aLong -> "fetch " + (9 - aLong) + "'"));
+                    .take(20)//from 0 to 19
+                    .map(aLong -> "fetch " + (19 - aLong) + "'"));
         }
         return _countdownCommand;
     }
@@ -88,26 +90,17 @@ public class LoginViewModel {
     private Observable<Boolean> login(String phoneNumber, String code) {
         return Observable.timer(4, TimeUnit.SECONDS)
                 .flatMap(aLong -> {
-                    if (phoneNumber.equals("18503002163")){
-                        return Observable.error(new RuntimeException("the phone number is not yours!"));
-                    } else  if (code.equals("123456")) {
+                    if (code.equals("123456")) {
                         return Observable.just(true);
                     } else {
-                        return Observable.error(new RuntimeException("your code is wrong!!"));
+                        return Observable.error(new RuntimeException("your captcha is wrong!!"));
                     }
                 });
     }
 
-    private Observable<String> fetchVerificationCode(String phoneNumber) {
+    private Observable<String> fetchCaptcha(String phoneNumber) {
         return Observable.timer(2, TimeUnit.SECONDS)
-                .map(seconds -> System.currentTimeMillis())
-                .map(millis -> millis % 2)
-                .flatMap(i -> {
-                    if (i == 0) {
-                        return Observable.error(new RuntimeException("it seen that your network is disconnected."));
-                    }
-                    return Observable.just("your code is 123456.");
-                });
+                .map(i -> "your captcha is 123456.");
     }
 
 

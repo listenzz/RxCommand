@@ -81,5 +81,18 @@
         android:textColor="#ffffff"
         android:textSize="16dp" />
 
+    <TextView
+        android:visibility="gone"
+        android:id="@+id/tip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_marginLeft="12dp"
+        android:layout_marginRight="12dp"
+        android:textColor="@color/colorAccent"
+        android:textSize="18dp"
+        android:text="You could rotate the screen and see what will happen."
+        />
+
 
 </LinearLayout>

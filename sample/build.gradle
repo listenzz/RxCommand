@@ -36,7 +36,7 @@ dependencies {
     compile project(':rxcommand')
 
     // Live
-    compile 'com.shundaojia:live:0.1.0'
+    compile 'com.shundaojia:live:0.1.1'
 
     // RxJava
     compile "io.reactivex.rxjava2:rxandroid:$rootProject.rxandroidVersion"

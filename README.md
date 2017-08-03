@@ -31,9 +31,9 @@ How to achieve the product request？ All in the sample module.
 
 ```gradle
 buildscript {
-	repositories {
-	    jcenter()
-	}
+    repositories {
+        jcenter()
+    }
 }
 ``` 
 

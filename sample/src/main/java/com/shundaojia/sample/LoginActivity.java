@@ -61,7 +61,7 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
         RxTextView
                 .textChanges(captchaEditText)
                 .compose(Live.bindLifecycle(this))
-                .subscribe(viewModel::setVerificationCode);
+                .subscribe(viewModel::setCaptcha);
 
         RxCommandBinder
                 .bind(captchaButton, viewModel.captchaCommand(), Live.bindLifecycle(this));

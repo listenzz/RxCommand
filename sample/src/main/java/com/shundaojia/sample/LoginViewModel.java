@@ -39,7 +39,7 @@ public class LoginViewModel extends ViewModel{
         _phoneNumber.onNext(phoneNumber);
     }
 
-    public void setVerificationCode(CharSequence code) {
+    public void setCaptcha(CharSequence code) {
         _captcha.onNext(code);
     }
 

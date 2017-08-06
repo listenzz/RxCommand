@@ -5,7 +5,6 @@ import android.arch.lifecycle.LifecycleRegistryOwner;
 import android.arch.lifecycle.ViewModelProviders;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -105,11 +104,6 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
                 .compose(Live.bindLifecycle(this))
                 .subscribe(s -> captchaButton.setText(s));
 
-        viewModel.countdownCommand()
-                .switchToLatest()
-                .observeOn(AndroidSchedulers.mainThread())
-                .compose(Live.bindLifecycle(this))
-                .subscribe(s -> Log.w(TAG, s));
 
         // login
         viewModel.loginCommand()
@@ -123,14 +117,6 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
                     }
                 });
 
-        Observable.merge(
-                    viewModel.captchaCommand().errors(),
-                    viewModel.loginCommand().errors())
-                .compose(Live.bindLifecycle(this))
-                .subscribe(throwable ->
-                        Toast.makeText(LoginActivity.this, throwable.getLocalizedMessage(), Toast.LENGTH_LONG).show()
-                );
-
         viewModel.loginCommand()
                 .switchToLatest()
                 .observeOn(AndroidSchedulers.mainThread())
@@ -142,6 +128,15 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
                         Toast.makeText(LoginActivity.this, "Login fail!!", Toast.LENGTH_LONG).show();
                     }
                 });
+
+        // errors
+        Observable.merge(
+                viewModel.captchaCommand().errors(),
+                viewModel.loginCommand().errors())
+                .compose(Live.bindLifecycle(this))
+                .subscribe(throwable ->
+                        Toast.makeText(LoginActivity.this, throwable.getLocalizedMessage(), Toast.LENGTH_LONG).show()
+                );
     }
 
     @Override

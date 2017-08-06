@@ -17,7 +17,6 @@
         android:hint="Enter your phone number"
         android:inputType="phone"
         android:maxLength="11"
-        android:text="18503002163"
         android:paddingLeft="10dp"
         android:paddingRight="16dp"
         android:textColor="#e6696F7A"

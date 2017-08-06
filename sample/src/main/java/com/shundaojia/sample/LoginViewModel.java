@@ -52,7 +52,7 @@ public class LoginViewModel extends ViewModel{
 
             _captchaCommand = RxCommand.create(enabled, o -> {
                 String phone = _phoneNumber.blockingFirst().toString();
-                Timber.i("fetch verification code with %s", phone);
+                Timber.i("fetch captcha with %s", phone);
                 Observable fetchCode =  fetchCaptcha(phone);
                 Observable countdown =  Observable.defer(() -> countdownCommand().execute(null).ignoreElements().toObservable()) ;
                 return Observable.concat(fetchCode, countdown);
@@ -76,21 +76,21 @@ public class LoginViewModel extends ViewModel{
             Observable<Boolean> loginInputValid = Observable.combineLatest(
                     _captchaValid,
                     _phoneNumberValid,
-                    (codeValid, phoneValid) -> codeValid && phoneValid);
+                    (captchaValid, phoneValid) -> captchaValid && phoneValid);
 
             _loginCommand = RxCommand.create(loginInputValid, o -> {
                 String phone = _phoneNumber.blockingFirst().toString();
-                String code = _captcha.blockingFirst().toString();
-                return login(phone, code);
+                String captcha = _captcha.blockingFirst().toString();
+                return login(phone, captcha);
             });
         }
         return _loginCommand;
     }
 
-    private Observable<Boolean> login(String phoneNumber, String code) {
+    private Observable<Boolean> login(String phoneNumber, String captcha) {
         return Observable.timer(4, TimeUnit.SECONDS)
                 .flatMap(aLong -> {
-                    if (code.equals("123456")) {
+                    if (captcha.equals("123456")) {
                         return Observable.just(true);
                     } else {
                         return Observable.error(new RuntimeException("your captcha is wrong!!"));
@@ -102,6 +102,5 @@ public class LoginViewModel extends ViewModel{
         return Observable.timer(2, TimeUnit.SECONDS)
                 .map(i -> "your captcha is 123456.");
     }
-
 
 }

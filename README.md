@@ -55,14 +55,6 @@ public class MyActivity extends AppCompatActivity {
 }
 ```
 
-## Demo
-
-Play this video.
-
-<video width="360" height="640" controls>
-<source src="https://listenzz.github.io/videos/rxcommand.mp4">
-</video>
-
 ## Usage
 
 ```gradle

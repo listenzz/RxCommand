@@ -1,33 +1,69 @@
 # RxCommand
-A lightweight, RxJava-based library that helps ViewModel provide commands to bind to View.
+A command is an Observable triggered in response to some action, typicallyUI-related.
+
+It manage the extra states, such as loading, enabled, errors for you, when using RxJava2 implement the functions of your ViewModel.
 
 
-## Features 
+## Code like this
 
-* Based on RxJava, has all the advantages of RxJava
-* Separate concerns, easy to selectively handle the state of task execution (enabled,executing, error, completion, etc.)
-* Make your business logic code centralized for easy reading and maintenance
+ViewModel
 
-## How to use 
+```java
+public class MyViewModel extends ViewModel {
 
-### Demo
+    public final RxCommand<List<User>> usersCommand;
 
-![login](./screenshot/login.png) 
+    public MyViewModel(final UserRepository userRepository) {
 
-Suppose we need to make a login page.
+        usersCommand = RxCommand.create(o -> {
+                return userRepository.getUsers();
+            });
+    }
+}
+```
 
-* When the phone number is illegal, the **Fetch Captcha** button is disable
-* When the captcha is being acquired, the **Fetch Captcha** button is disable and displays loading
-* When fetching captcha  successfully, the countdown starts, the **Fetch Captcha** button is still disable, the countdown ends, the button is enable again
-* When fetching captcha failed, the countdown is not started and the **Fetch Captcha** button restores the enable state
-* When the phone number and captcha are valid, the **Login** button is  clickable, otherwise it can not be clicked
-* When starting login command, the **Login** button is in disable state, and a loading showing.
-* When the login  successful, hide loading, jump to the MainActivity.
-* When the login failed, stop loading and prompt for an error.
+Activity
 
-How to achieve the product request？ All in the sample module.
 
-### Usage
+```java
+public class MyActivity extends AppCompatActivity {
+    public void onCreate(Bundle savedInstanceState) {
+        MyViewModel viewModel = ViewModelProviders.of(this).get(MyViewModel.class);
+
+        viewModel.usersCommand
+                .switchToLatest()
+                .observeOn(AndroidSchedulers.mainThread())
+                .compose(Live.bindLifecycle(this))
+                .subscribe(users -> {
+                    // update UI
+                });
+
+        viewModel.usersCommand
+                .executing()
+                .compose(Live.bindLifecycle(this))
+                .subscribe(executing -> {
+                    // show or hide loading
+                })
+
+        viewModel.usersCommand
+                .errors()
+                .compose(Live.bindLifecycle(this))
+                .subcribe(throwable -> {
+                    // show error message
+                });
+    }
+}
+```
+
+## Demo
+
+Play this video.
+
+<video width="360" height="640" controls>
+<source src="https://listenzz.github.io/videos/rxcommand.mp4">
+</video>
+
+## Usage
 
 ```gradle
 buildscript {

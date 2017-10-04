@@ -51,12 +51,12 @@ public class LoginActivity extends AppCompatActivity {
         RxTextView
                 .textChanges(phoneNumberEditText)
                 .compose(Live.bindLifecycle(this))
-                .subscribe(viewModel::setPhoneNumber);
+                .subscribe(viewModel.phoneNumber::setValue);
 
         RxTextView
                 .textChanges(captchaEditText)
                 .compose(Live.bindLifecycle(this))
-                .subscribe(viewModel::setCaptcha);
+                .subscribe(viewModel.captcha::setValue);
 
         RxCommandBinder
                 .bind(captchaButton, viewModel.captchaCommand(), Live.bindLifecycle(this));

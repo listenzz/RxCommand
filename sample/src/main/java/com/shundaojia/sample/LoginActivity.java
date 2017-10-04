@@ -1,7 +1,5 @@
 package com.shundaojia.sample;
 
-import android.arch.lifecycle.LifecycleRegistry;
-import android.arch.lifecycle.LifecycleRegistryOwner;
 import android.arch.lifecycle.ViewModelProviders;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -21,11 +19,9 @@ import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 
 
-public class LoginActivity extends AppCompatActivity implements LifecycleRegistryOwner{
+public class LoginActivity extends AppCompatActivity {
 
     private final static String TAG = "LoginActivity";
-
-    private final LifecycleRegistry registry = new LifecycleRegistry(this);
 
     @BindView(R.id.phone_number)
     EditText phoneNumberEditText;
@@ -139,8 +135,5 @@ public class LoginActivity extends AppCompatActivity implements LifecycleRegistr
                 );
     }
 
-    @Override
-    public LifecycleRegistry getLifecycle() {
-        return registry;
-    }
+
 }

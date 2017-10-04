@@ -12,8 +12,8 @@ android {
 
     defaultConfig {
         applicationId "com.shundaojia.sample"
-        minSdkVersion 21
-        targetSdkVersion 25
+        minSdkVersion rootProject.minSdkVersion
+        targetSdkVersion rootProject.targetSdkVersion
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -36,7 +36,8 @@ dependencies {
     compile project(':rxcommand')
 
     // Live
-    compile 'com.shundaojia:live:0.1.1'
+    compile 'com.shundaojia:live:1.0.0'
+    compile "android.arch.lifecycle:extensions:1.0.0-beta1"
 
     // RxJava
     compile "io.reactivex.rxjava2:rxandroid:$rootProject.rxandroidVersion"

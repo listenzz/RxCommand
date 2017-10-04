@@ -3,6 +3,9 @@ A command is an Observable triggered in response to some action, typicallyUI-rel
 
 It manage the extra states, such as loading, enabled, errors for you, when using RxJava2 implement the functions of your ViewModel.
 
+## 博客
+
+[Android 生命周期架构组件与 RxJava 完美协作](https://listenzz.github.io/android-lifecyle-works-perfectly-with-rxjava.html)
 
 ## Code like this
 
@@ -67,9 +70,22 @@ buildscript {
 
 ```gradle
 dependencies {
-    compile 'com.android.support:appcompat-v7:25.2.0'
+
+    //  using Support Library 26.1+
+    compile 'com.android.support:appcompat-v7:26.1.0'
+    compile 'com.android.support:support-v4:26.1.0'
+    compile 'com.android.support:design:26.1.0'
+
+    // RxJava
     compile 'io.reactivex.rxjava2:rxjava:2.1.0'
     compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
+
+    // Live
+    compile 'com.shundaojia:live:1.0.0'
+
+    // RxCommand
     compile 'com.shundaojia:rxcommand:1.1.3'
+    compile 'android.arch.lifecycle:extensions:1.0.0-beta1' // for ViewModel
+
 }
 ```

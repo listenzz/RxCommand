@@ -70,7 +70,7 @@ public class LoginViewModel extends ViewModel{
                     (captchaValid, phoneValid) -> captchaValid && phoneValid);
 
             _loginCommand = RxCommand.create(loginInputValid, o -> {
-                String phone = phoneNumber.value().toString();
+                String phone = this.phoneNumber.value().toString();
                 String captcha = this.captcha.value().toString();
                 return login(phone, captcha);
             });

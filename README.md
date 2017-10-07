@@ -64,6 +64,7 @@ public class MyActivity extends AppCompatActivity {
 buildscript {
     repositories {
         jcenter()
+        maven { url 'https://maven.google.com' }
     }
 }
 ``` 

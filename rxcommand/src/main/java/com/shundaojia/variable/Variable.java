@@ -13,6 +13,14 @@ import io.reactivex.subjects.Subject;
 
 public class Variable<T> {
 
+    private final static Object INSTANCE = new Object();
+
+    public static <T> T NULL() {
+        @SuppressWarnings("unchecked")
+        T t =  (T)INSTANCE;
+        return t;
+    }
+
     private  T val;
 
     private final Subject<T> subject;
@@ -35,6 +43,10 @@ public class Variable<T> {
             this.val = value;
         }
         subject.onNext(value);
+    }
+
+    public boolean isNULL() {
+        return INSTANCE == val;
     }
 
     public Observable<T> asObservable() {

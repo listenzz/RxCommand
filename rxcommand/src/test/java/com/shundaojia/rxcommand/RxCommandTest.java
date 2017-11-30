@@ -8,8 +8,6 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
-import io.reactivex.functions.Function;
 import io.reactivex.observers.TestObserver;
 import io.reactivex.schedulers.Schedulers;
 
@@ -28,12 +26,7 @@ public class RxCommandTest {
     public void beforeExecution_defaultValue() {
         Observable<Boolean> enabled = Observable.just(true);
 
-        RxCommand<String> command = RxCommand.create(enabled, new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.empty();
-            }
-        });
+        RxCommand<String> command = RxCommand.create(enabled, it -> Observable.empty());
 
         // no next value
         command.executionObservables()
@@ -64,12 +57,7 @@ public class RxCommandTest {
     public void afterExecution_defaultValue() {
         Observable<Boolean> enabled = Observable.just(true);
 
-        RxCommand<String> command = RxCommand.create(enabled, new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.empty();
-            }
-        });
+        RxCommand<String> command = RxCommand.create(enabled, it -> Observable.empty());
 
         command.execute(null);
 
@@ -100,13 +88,7 @@ public class RxCommandTest {
 
     @Test
     public void executeWhenNotEnable_emitIllegalStateException() {
-        RxCommand<String> command = RxCommand.create(Observable.just(false), new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.empty();
-            }
-        });
-
+        RxCommand<String> command = RxCommand.create(Observable.just(false), it -> Observable.empty());
         command.execute(null)
                 .test()
                 .assertError(IllegalStateException.class);
@@ -114,14 +96,11 @@ public class RxCommandTest {
 
     @Test
     public void executionObservables_noErrors() {
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                if (o == null) {
-                    return Observable.error(new Exception("something wrong"));
-                } else {
-                    return Observable.just((String) o);
-                }
+        RxCommand<String> command = RxCommand.create(o -> {
+            if (o == null) {
+                return Observable.error(new Exception("something wrong"));
+            } else {
+                return Observable.just((String) o);
             }
         });
 
@@ -140,14 +119,11 @@ public class RxCommandTest {
 
     @Test
     public void switchToLatest_noErrors() {
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                if (o == null) {
-                    return Observable.error(new Exception("something wrong"));
-                } else {
-                    return Observable.just((String) o);
-                }
+        RxCommand<String> command = RxCommand.create(o -> {
+            if (o == null) {
+                return Observable.error(new Exception("something wrong"));
+            } else {
+                return Observable.just((String) o);
             }
         });
 
@@ -167,12 +143,7 @@ public class RxCommandTest {
     public void anErrorOccurredDuringExecution_emitThrowableAsValue() {
 
         final Throwable throwable = new IOException("something wrong");
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.error(throwable);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.error(throwable));
 
         TestObserver<Throwable> testObserver1 = new TestObserver<>();
         TestObserver<Throwable> testObserver2 = new TestObserver<>();
@@ -189,12 +160,7 @@ public class RxCommandTest {
     @Test
     public void anErrorOccurredDuringExecution_noValue() {
         final Throwable throwable = new Exception("something wrong");
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.error(throwable);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.error(throwable));
 
         TestObserver<String> testObserver = new TestObserver<>();
         command.switchToLatest().subscribe(testObserver);
@@ -209,14 +175,10 @@ public class RxCommandTest {
     @Test
     public void executionWithError_showAndHideLoading() {
         final Throwable throwable = new IOException("something wrong");
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.<String>error(throwable)
-                        .subscribeOn(Schedulers.newThread())
-                        .delay(10, TimeUnit.MILLISECONDS);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.<String>error(throwable)
+                .subscribeOn(Schedulers.newThread())
+                .delay(10, TimeUnit.MILLISECONDS)
+        );
 
         command.executing().test().assertValue(false);
 
@@ -233,14 +195,10 @@ public class RxCommandTest {
 
     @Test
     public void executionWithValue_showAndHideLoading() {
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.just(VALUE)
-                        .subscribeOn(Schedulers.newThread())
-                        .delay(10, TimeUnit.MILLISECONDS);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.just(VALUE)
+                .subscribeOn(Schedulers.newThread())
+                .delay(10, TimeUnit.MILLISECONDS)
+        );
 
         command.executing().test().assertValue(false);
 
@@ -261,14 +219,10 @@ public class RxCommandTest {
     @Test
     public void executeAnotherTaskWhenExecuting_notAllowed() {
 
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.just(VALUE)
-                        .subscribeOn(Schedulers.newThread())
-                        .delay(10, TimeUnit.MILLISECONDS);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.just(VALUE)
+                .subscribeOn(Schedulers.newThread())
+                .delay(10, TimeUnit.MILLISECONDS)
+        );
 
         command.enabled()
                 .test()
@@ -299,14 +253,9 @@ public class RxCommandTest {
     @Test
     public void executeAnotherTaskWhenAllowingConcurrent_allowed() {
 
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String) o)
-                        .subscribeOn(Schedulers.newThread())
-                        .delay(10, TimeUnit.MILLISECONDS);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.just((String) o)
+                .subscribeOn(Schedulers.newThread())
+                .delay(10, TimeUnit.MILLISECONDS));
 
         command.setAllowsConcurrentExecution(true);
 
@@ -330,12 +279,10 @@ public class RxCommandTest {
 
     @Test
     public void executionObservables_notAllowingConcurrent_onlyExecutionOnce() {
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String) o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.just((String) o)
+                .subscribeOn(Schedulers.newThread())
+                .delay(10, TimeUnit.MILLISECONDS)
+        );
 
         TestObserver<Observable<String>> testObserver = new TestObserver<>();
         command.executionObservables().subscribe(testObserver);
@@ -358,12 +305,10 @@ public class RxCommandTest {
 
     @Test
     public void executionObservables_allowingConcurrent_executionMultiTimes() {
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String) o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.just((String) o)
+                .subscribeOn(Schedulers.newThread())
+                .delay(10, TimeUnit.MILLISECONDS)
+        );
 
         // allows concurrent
         command.setAllowsConcurrentExecution(true);
@@ -375,12 +320,7 @@ public class RxCommandTest {
                 .subscribe(testObserver);
 
         command.executionObservables()
-                .flatMap(new Function<Observable<String>, ObservableSource<String>>() {
-                    @Override
-                    public ObservableSource<String> apply(Observable<String> stringObservable) throws Exception {
-                        return stringObservable;
-                    }
-                })
+                .flatMap(stringObservable -> stringObservable)
                 .subscribe(stringTestObserver);
 
         command.execute("1");
@@ -404,12 +344,10 @@ public class RxCommandTest {
 
     @Test
     public void switchToLatest_notAllowingConcurrent_onlyHeadMostValue() {
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String) o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.just((String) o)
+                .subscribeOn(Schedulers.newThread())
+                .delay(10, TimeUnit.MILLISECONDS)
+        );
 
         TestObserver<String> testObserver = new TestObserver<>();
         command.switchToLatest().subscribe(testObserver);
@@ -432,12 +370,10 @@ public class RxCommandTest {
 
     @Test
     public void switchToLatest_allowingConcurrent_onlyLatestValue() {
-        RxCommand<String> command = RxCommand.create(new Function<Object, Observable<String>>() {
-            @Override
-            public Observable<String> apply(Object o) throws Exception {
-                return Observable.just((String) o).subscribeOn(Schedulers.newThread()).delay(10, TimeUnit.MILLISECONDS);
-            }
-        });
+        RxCommand<String> command = RxCommand.create(o -> Observable.just((String) o)
+                .subscribeOn(Schedulers.newThread())
+                .delay(10, TimeUnit.MILLISECONDS)
+        );
 
         // allows concurrent
         command.setAllowsConcurrentExecution(true);

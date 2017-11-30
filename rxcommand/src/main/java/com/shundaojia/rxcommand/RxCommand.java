@@ -4,13 +4,9 @@ import android.support.annotation.MainThread;
 
 import io.reactivex.Notification;
 import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.annotations.Nullable;
-import io.reactivex.functions.BiFunction;
-import io.reactivex.functions.Function;
-import io.reactivex.functions.Predicate;
 import io.reactivex.observables.ConnectableObservable;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
@@ -21,15 +17,19 @@ import io.reactivex.subjects.Subject;
  */
 public class RxCommand<T> {
 
-    public static <T> RxCommand<T> create(Function<Object, Observable<T>> function) {
+    public interface Func<T, R> {
+        R apply(@Nullable T t) throws Exception;
+    }
+
+    public static <T> RxCommand<T> create(Func<Object, Observable<T>> function) {
         return new RxCommand<>(function);
     }
 
-    public static <T> RxCommand<T> create(Observable<Boolean> enabled, Function<Object, Observable<T>> function) {
+    public static <T> RxCommand<T> create(Observable<Boolean> enabled, Func<Object, Observable<T>> function) {
         return new RxCommand<>(enabled, function);
     }
 
-    private final Function<Object, Observable<T>> mFunc;
+    private final Func<Object, Observable<T>> mFunc;
 
     private final Subject<Observable<T>> mAddedExecutionObservableSubject;
 
@@ -80,19 +80,14 @@ public class RxCommand<T> {
      *                          subscribed to synchronously. Neither the function nor the
      *                          returned observable may be null.
      */
-    public RxCommand(@Nullable Observable<Boolean> enabledObservable, @NonNull Function<Object, Observable<T>> func) {
+    public RxCommand(@Nullable Observable<Boolean> enabledObservable, @NonNull Func<Object, Observable<T>> func) {
 
         mAddedExecutionObservableSubject = PublishSubject.create();
         mAllowsConcurrentExecutionSubject = PublishSubject.create();
-        mFunc = func;
+        mFunc =func;
 
         mExecutionObservables = mAddedExecutionObservableSubject
-                .map(new Function<Observable<T>, Observable<T>>() {
-                    @Override
-                    public Observable<T> apply(Observable<T> tObservable) throws Exception {
-                        return tObservable.onErrorResumeNext(Observable.<T>empty());
-                    }
-                })
+                .map(observable -> observable.onErrorResumeNext(Observable.<T>empty()))
                 .observeOn(AndroidSchedulers.mainThread());
 
         mLatestObservable = Observable
@@ -101,24 +96,11 @@ public class RxCommand<T> {
                 .autoConnect();
 
         mErrors = mAddedExecutionObservableSubject
-                .flatMap(new Function<Observable<T>, ObservableSource<Throwable>>() {
-                    @Override
-                    public ObservableSource<Throwable> apply(Observable<T> tObservable) throws Exception {
-                        return tObservable.materialize()
-                                .filter(new Predicate<Notification<T>>() {
-                                    @Override
-                                    public boolean test(Notification<T> tNotification) throws Exception {
-                                        return tNotification.isOnError();
-                                    }
-                                })
-                                .map(new Function<Notification<T>, Throwable>() {
-                                    @Override
-                                    public Throwable apply(Notification<T> tNotification) throws Exception {
-                                        return tNotification.getError();
-                                    }
-                                });
-                    }
-                })
+                .flatMap(observable -> observable
+                        .materialize()
+                        .filter(Notification::isOnError)
+                        .map(Notification::getError)
+                )
                 .observeOn(AndroidSchedulers.mainThread())
                 // if someone subscribes to `errors` _after_ an execution
                 // has started, it should still receive any error from that execution.
@@ -126,31 +108,16 @@ public class RxCommand<T> {
                 .autoConnect();
 
         Observable<Boolean> immediateExecuting = mAddedExecutionObservableSubject
-                .flatMap(new Function<Observable<T>, ObservableSource<Integer>>() {
-                    @Override
-                    public ObservableSource<Integer> apply(Observable<T> tObservable) throws Exception {
-                        return tObservable
-                                .ignoreElements()
-                                .toMaybe()
-                                .toObservable()
-                                .onErrorResumeNext(Observable.<T>empty())
-                                .concatWith(Observable.just(-1))
-                                .startWith(1)
-                                .cast(Integer.class);
-                    }
-                })
-                .scan(0, new BiFunction<Integer, Integer, Integer>() {
-                    @Override
-                    public Integer apply(Integer running, Integer next) throws Exception {
-                        return running + next;
-                    }
-                })
-                .map(new Function<Integer, Boolean>() {
-                    @Override
-                    public Boolean apply(Integer count) throws Exception {
-                        return count > 0;
-                    }
-                })
+                .flatMap(observable -> observable
+                        .ignoreElements()
+                        .toMaybe()
+                        .toObservable()
+                        .onErrorResumeNext(Observable.<T>empty())
+                        .concatWith(Observable.just(-1))
+                        .startWith(1)
+                        .cast(Integer.class))
+                .scan(0, (running, next) -> running + next)
+                .map(count -> count > 0)
                 .startWith(false);
 
         mExecuting = immediateExecuting
@@ -165,12 +132,7 @@ public class RxCommand<T> {
                 .combineLatest(
                         mAllowsConcurrentExecutionSubject.startWith(false),
                         immediateExecuting,
-                        new BiFunction<Boolean, Boolean, Boolean>() {
-                            @Override
-                            public Boolean apply(Boolean allowedConcurrent, Boolean executing) throws Exception {
-                                return allowedConcurrent || !executing;
-                            }
-                        })
+                        (allowedConcurrent, executing) -> allowedConcurrent || !executing)
                 .distinctUntilChanged()
                 .replay(1)
                 .autoConnect();
@@ -180,12 +142,7 @@ public class RxCommand<T> {
         }
 
         mImmediateEnabled = Observable
-                .combineLatest(enabledObservable, moreExecutionsAllowed, new BiFunction<Boolean, Boolean, Boolean>() {
-                    @Override
-                    public Boolean apply(Boolean enabled, Boolean allowed) throws Exception {
-                        return enabled && allowed;
-                    }
-                })
+                .combineLatest(enabledObservable, moreExecutionsAllowed, (enabled, allowed) -> enabled && allowed)
                 .distinctUntilChanged()
                 .replay(1);
         // since `mImmediateEnabled` is not export, we must trigger this stream manually
@@ -200,18 +157,18 @@ public class RxCommand<T> {
     }
 
     /**
-     * Call {@link #RxCommand(Observable, Function)} with a null `enabledObservable`.
+     * Call {@link #RxCommand(Observable, Func)} with a null `enabledObservable`.
      *
-     * @param func
+     * @param func the factory creating observable
      */
-    public RxCommand(Function<Object, Observable<T>> func) {
+    public RxCommand(Func<Object, Observable<T>> func) {
         this(null, func);
     }
 
     /**
      * see {@link #allowsConcurrentExecution()}
      *
-     * @param allows
+     * @param allows whether allows concurrent execution
      */
     public final void setAllowsConcurrentExecution(boolean allows) {
         mAllowsConcurrentExecution = allows;
@@ -237,7 +194,7 @@ public class RxCommand<T> {
      * An observable of whether this command is currently executing.
      * <p>
      * This will send true whenever {@link #execute(Object)} is invoked and the created observable has
-     * not yet terminated. Once all executions have terminated, {@link #executing()} will
+     * not yet terminated. Once all executions have terminated, this observable will
      * send false.
      * <p>
      * This observable will send its current value upon subscription, and then all
@@ -290,7 +247,7 @@ public class RxCommand<T> {
     /**
      * switch to the latest observable of observables send by {@link #executionObservables()}
      *
-     * @return
+     * @return the latest observable
      */
     public Observable<T> switchToLatest() {
         return mLatestObservable;

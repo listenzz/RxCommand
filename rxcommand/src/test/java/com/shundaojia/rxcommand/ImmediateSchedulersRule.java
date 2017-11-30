@@ -4,11 +4,7 @@ import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import java.util.concurrent.Callable;
-
-import io.reactivex.Scheduler;
 import io.reactivex.android.plugins.RxAndroidPlugins;
-import io.reactivex.functions.Function;
 import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.schedulers.Schedulers;
 
@@ -23,19 +19,8 @@ public class ImmediateSchedulersRule implements TestRule {
             @Override
             public void evaluate() throws Throwable {
 
-                RxAndroidPlugins.setMainThreadSchedulerHandler(new Function<Scheduler, Scheduler>() {
-                    @Override
-                    public Scheduler apply(Scheduler scheduler) throws Exception {
-                        return Schedulers.trampoline();
-                    }
-                });
-
-                RxAndroidPlugins.setInitMainThreadSchedulerHandler(new Function<Callable<Scheduler>, Scheduler>() {
-                    @Override
-                    public Scheduler apply(Callable<Scheduler> schedulerCallable) throws Exception {
-                        return Schedulers.trampoline();
-                    }
-                });
+                RxAndroidPlugins.setMainThreadSchedulerHandler(scheduler ->  Schedulers.trampoline());
+                RxAndroidPlugins.setInitMainThreadSchedulerHandler(schedulerCallable ->  Schedulers.trampoline());
 
                 try {
                     base.evaluate();

@@ -13,11 +13,17 @@ ext {
 }
 
 android {
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
     compileSdkVersion rootProject.ext.compileSdkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
 
     defaultConfig {
-        minSdkVersion 9
+        minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.targetSdkVersion
         versionCode gitVersionCode()
         versionName "1.2.0"
@@ -39,9 +45,9 @@ dependencies {
     })
     testCompile 'junit:junit:4.12'
 
-    provided "com.android.support:appcompat-v7:$rootProject.supportLibraryVersion"
-    provided "io.reactivex.rxjava2:rxandroid:$rootProject.rxandroidVersion"
-    provided "io.reactivex.rxjava2:rxjava:$rootProject.rxjavaVersion"
+    implementation "com.android.support:appcompat-v7:$rootProject.supportLibraryVersion"
+    implementation "io.reactivex.rxjava2:rxandroid:$rootProject.rxandroidVersion"
+    implementation "io.reactivex.rxjava2:rxjava:$rootProject.rxjavaVersion"
 }
 
 publish {

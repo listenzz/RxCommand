@@ -44,8 +44,8 @@ public class LoginViewModel extends ViewModel{
             _captchaCommand = RxCommand.create(enabled, o -> {
                 String phone = phoneNumber.value().toString();
                 Timber.i("fetch captcha with %s", phone);
-                Observable fetchCode =  fetchCaptcha(phone);
-                Observable countdown =  Observable.defer(() -> countdownCommand().execute(null).ignoreElements().toObservable()) ;
+                Observable<String> fetchCode =  fetchCaptcha(phone);
+                Observable<String> countdown =  Observable.defer(() -> countdownCommand().execute(null).ignoreElements().toObservable()) ;
                 return Observable.concat(fetchCode, countdown);
             });
         }

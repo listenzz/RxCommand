@@ -26,7 +26,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.targetSdkVersion
         versionCode gitVersionCode()
-        versionName "1.2.0"
+        versionName "1.2.1"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
     }
@@ -54,7 +54,7 @@ publish {
     userOrg = 'listenzz'
     groupId = 'com.shundaojia'
     artifactId = 'rxcommand'
-    publishVersion = '1.2.0'
+    publishVersion = '1.2.1'
     desc = 'A command is an Observable triggered in response to some action, typically UI-related.'
     website = 'https://github.com/listenzz/RxCommand'
 }

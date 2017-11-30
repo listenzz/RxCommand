@@ -51,7 +51,7 @@ public class MyActivity extends AppCompatActivity {
         viewModel.usersCommand
                 .errors()
                 .compose(Live.bindLifecycle(this))
-                .subcribe(throwable -> {
+                .subscribe(throwable -> {
                     // show error message
                 });
     }
@@ -82,11 +82,11 @@ dependencies {
     compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
 
     // Live
-    compile 'com.shundaojia:live:1.0.0'
+    compile 'com.shundaojia:live:1.0.1'
 
     // RxCommand
-    compile 'com.shundaojia:rxcommand:1.2.0'
-    compile 'android.arch.lifecycle:extensions:1.0.0-beta1' // for ViewModel
+    compile 'com.shundaojia:rxcommand:1.2.1'
+    compile 'android.arch.lifecycle:extensions:1.0.0' // for ViewModel
 
 }
 ```

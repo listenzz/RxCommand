@@ -82,7 +82,7 @@ dependencies {
     compile 'io.reactivex.rxjava2:rxandroid:2.0.1'
 
     // Live
-    compile 'com.shundaojia:live:1.0.1'
+    compile 'com.shundaojia:live:1.0.2'
 
     // RxCommand
     compile 'com.shundaojia:rxcommand:1.2.1'

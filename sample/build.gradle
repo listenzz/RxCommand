@@ -35,7 +35,7 @@ dependencies {
     compile project(':rxcommand')
 
     // Live
-    compile 'com.shundaojia:live:1.0.1'
+    compile 'com.shundaojia:live:1.0.2'
     compile "android.arch.lifecycle:extensions:1.0.0"
 
     // RxJava

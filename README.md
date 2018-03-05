@@ -85,7 +85,7 @@ dependencies {
     compile 'com.shundaojia:live:1.0.2'
 
     // RxCommand
-    compile 'com.shundaojia:rxcommand:1.2.1'
+    compile 'com.shundaojia:rxcommand:1.2.2'
     compile 'android.arch.lifecycle:extensions:1.0.0' // for ViewModel
 
 }

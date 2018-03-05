@@ -1,7 +1,6 @@
 package com.shundaojia.variable;
 
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
 import io.reactivex.Observable;
 import io.reactivex.subjects.BehaviorSubject;
@@ -13,14 +12,6 @@ import io.reactivex.subjects.Subject;
 
 public class Variable<T> {
 
-    private final static Object INSTANCE = new Object();
-
-    public static <T> T NULL() {
-        @SuppressWarnings("unchecked")
-        T t =  (T)INSTANCE;
-        return t;
-    }
-
     private  T val;
 
     private final Subject<T> subject;
@@ -31,7 +22,7 @@ public class Variable<T> {
         this.subject = subject.toSerialized();
     }
 
-    @Nullable
+    @NonNull
     public T value() {
         synchronized (this) {
             return val;
@@ -43,10 +34,6 @@ public class Variable<T> {
             this.val = value;
         }
         subject.onNext(value);
-    }
-
-    public boolean isNULL() {
-        return INSTANCE == val;
     }
 
     public Observable<T> asObservable() {
